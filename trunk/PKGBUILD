@@ -1,7 +1,7 @@
 # Maintainer: Jan Alexander Steffens (heftig) <heftig@archlinux.org>
 
-pkgbase=pulseaudio
-pkgname=(pulseaudio libpulse pulseaudio-{zeroconf,lirc,jack,bluetooth,equalizer,rtp})
+pkgbase=pulseaudio-a2dp-codecs
+pkgname=(pulseaudio-a2dp-codecs libpulse-a2dp-codecs pulseaudio-{zeroconf,lirc,jack,bluetooth,equalizer,rtp}-a2dp-codecs)
 pkgdesc="A featureful, general-purpose sound server"
 pkgver=14.2
 pkgrel=2
@@ -11,10 +11,36 @@ license=(GPL)
 makedepends=(libasyncns libcap attr libxtst libsm libsndfile rtkit libsoxr
              speexdsp tdb systemd dbus avahi bluez bluez-libs jack2 sbc
              lirc openssl fftw orc gtk3 webrtc-audio-processing check git meson
-             xmltoman)
+             xmltoman libopenaptx)
+
 _commit=6a487c5244563f49a025088de3510c80824fc99e  # tags/v14.2^0
-source=("git+https://gitlab.freedesktop.org/pulseaudio/pulseaudio.git#commit=$_commit")
-sha256sums=('SKIP')
+patches=(
+  0001-bluetooth-Add-missing-newlines-into-inline-XML-docum.patch
+  0002-bluetooth-Do-not-export-pa_a2dp_codecs-array.patch
+  0003-bluetooth-Change-codec-API-for-choosing-remote-endpo.patch
+  0004-bluetooth-policy-Reflect-a2dp-profile-names.patch
+  0005-bluetooth-Implement-A2DP-codec-switching-and-backcha.patch
+  0006-bluetooth-Set-initial-A2DP-profile-which-bluez-alrea.patch
+  0007-bluetooth-policy-Treat-bi-directional-A2DP-profiles-.patch
+  0008-bluetooth-Add-A2DP-aptX-and-aptX-HD-codecs-support.patch
+  0009-bluetooth-Add-A2DP-FastStream-codec-support.patch
+  0010-bluetooth-Add-more-variants-of-SBC-codec.patch
+)
+source=(
+  "git+https://gitlab.freedesktop.org/pulseaudio/pulseaudio.git#commit=$_commit"
+  "${patches[@]}"
+)
+sha256sums=('SKIP'
+            '581cd2072940d0187848b8beea63736360a4fee8e48ecf0269916bbc864a1dba'
+            'c2d3f4ba00e92b04b0c9bf06ed2a7cef6e41485ee12f458bb77368cb1d9a1d57'
+            'f412d44ab2a96326b41cd6c3e19c72c6703cfdaf50845e167e182747ee6847f6'
+            '45a5b032096ae0a9b358dbd2f5a5511c290e216d4f09432d18873ce3b3c24bce'
+            '79d95155a3ba754be8c5b654a208c0ffb1ab5154d70980111f56c6f5105f2354'
+            '860cad5644b39580218710085d2b100edeba42fd73d6a42fdce91e16ad5ad4e8'
+            '25d5041d034e1e3094c9570d15d3d4cfd60d9cac3f78a82d1c33877afc63f6af'
+            'd0409b0287766844fe44223aac5ab3407c1bcc86cc35b7cec8b3018690e5cece'
+            '6d5b5a3d88be13ec5e481ff99acd01810b2652c0ad17f17e2c9339796987ab7b'
+            '4a3598475acf0dec4774c987f0b4035056f67a121c1187e703f6397f7345a0ae')
 
 pkgver() {
   cd pulseaudio
@@ -26,6 +52,10 @@ prepare() {
 
   # Freeze version before patching
   ./git-version-gen doesnt-exist >.tarball-version
+
+  for patch in "${patches[@]}"; do
+    patch -p1 -i "../${patch}"
+  done
 }
 
 build() {
@@ -51,19 +81,21 @@ _pick() {
   done
 }
 
-package_pulseaudio() {
-  depends=("libpulse=$pkgver-$pkgrel" rtkit libltdl speexdsp tdb orc libsoxr
-           webrtc-audio-processing libxtst)
+package_pulseaudio-a2dp-codecs() {
+  depends=("libpulse-a2dp-codecs=$pkgver-$pkgrel" rtkit libltdl speexdsp tdb orc libsoxr
+           webrtc-audio-processing libxtst libopenaptx)
   optdepends=('pulseaudio-alsa: ALSA configuration (recommended)'
-              'pulseaudio-zeroconf: Zeroconf support'
-              'pulseaudio-lirc: IR (lirc) support'
-              'pulseaudio-jack: Jack support'
-              'pulseaudio-bluetooth: Bluetooth support'
-              'pulseaudio-equalizer: Graphical equalizer'
-              'pulseaudio-rtp: RTP and RAOP support')
+              'pulseaudio-zeroconf-a2dp-codecs: Zeroconf support'
+              'pulseaudio-lirc-a2dp-codecs: IR (lirc) support'
+              'pulseaudio-jack-a2dp-codecs: Jack support'
+              'pulseaudio-bluetooth-a2dp-codecs: Bluetooth support'
+              'pulseaudio-equalizer-a2dp-codecs: Graphical equalizer'
+              'pulseaudio-rtp-a2dp-codecs: RTP and RAOP support')
   backup=(etc/pulse/{daemon.conf,default.pa,system.pa})
   install=pulseaudio.install
   replaces=('pulseaudio-xen<=9.0' 'pulseaudio-gconf<=11.1')
+  provides=('pulseaudio')
+  conflicts=('pulseaudio')
 
   local pulsever=$(cd pulseaudio; ./git-version-gen .tarball-version)
   while [[ $pulsever = *.*.* ]]; do
@@ -124,55 +156,68 @@ package_pulseaudio() {
   _pick rtp $moddir/module-raop-sink.so
 }
 
-package_libpulse() {
+package_libpulse-a2dp-codecs() {
   pkgdesc="$pkgdesc (client library)"
   depends=(dbus libasyncns libcap libxcb libsm libsndfile systemd)
   optdepends=('glib2: mainloop integration')
-  provides=(libpulse{,-simple,-mainloop-glib}.so)
+  provides=('libpulse' libpulse{,-simple,-mainloop-glib}.so)
+  conflicts=('libpulse')
   license=(LGPL)
   backup=(etc/pulse/client.conf)
 
   mv libpulse/* "$pkgdir"
 }
 
-package_pulseaudio-zeroconf() {
+package_pulseaudio-zeroconf-a2dp-codecs() {
   pkgdesc="Zeroconf support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" avahi openssl)
+  depends=("pulseaudio-a2dp-codecs=$pkgver-$pkgrel" avahi openssl)
+  provides=('pulseaudio-zeroconf')
+  conflicts=('pulseaudio-zeroconf')
 
   mv zeroconf/* "$pkgdir"
 }
 
-package_pulseaudio-lirc() {
+package_pulseaudio-lirc-a2dp-codecs() {
   pkgdesc="IR (lirc) support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" lirc)
+  depends=("pulseaudio-a2dp-codecs=$pkgver-$pkgrel" lirc)
+  provides=('pulseaudio-lirc')
+  conflicts=('pulseaudio-lirc')
 
   mv lirc/* "$pkgdir"
 }
 
-package_pulseaudio-jack() {
+package_pulseaudio-jack-a2dp-codecs() {
   pkgdesc="Jack support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" jack)
+  depends=("pulseaudio-a2dp-codecs=$pkgver-$pkgrel" jack)
+  provides=('pulseaudio-jack')
+  conflicts=('pulseaudio-jack')
 
   mv jack/* "$pkgdir"
 }
 
-package_pulseaudio-bluetooth() {
+package_pulseaudio-bluetooth-a2dp-codecs() {
   pkgdesc="Bluetooth support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" bluez bluez-libs sbc)
+  depends=("pulseaudio-a2dp-codecs=$pkgver-$pkgrel" bluez bluez-libs sbc)
+  provides=('pulseaudio-bluetooth')
+  conflicts=('pulseaudio-bluetooth')
 
   mv bluetooth/* "$pkgdir"
 }
 
-package_pulseaudio-equalizer() {
+package_pulseaudio-equalizer-a2dp-codecs() {
   pkgdesc="Graphical equalizer for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel" python-{pyqt5,dbus} fftw)
+  depends=("pulseaudio-a2dp-codecs=$pkgver-$pkgrel" python-{pyqt5,dbus} fftw)
+  provides=('pulseaudio-equalizer')
+  conflicts=('pulseaudio-equalizer')
 
   mv equalizer/* "$pkgdir"
 }
 
-package_pulseaudio-rtp() {
+package_pulseaudio-rtp-a2dp-codecs() {
   pkgdesc="RTP and RAOP support for PulseAudio"
-  depends=("pulseaudio=$pkgver-$pkgrel")
+  depends=("pulseaudio-a2dp-codecs=$pkgver-$pkgrel")
+  provides=('pulseaudio-rtp')
+  conflicts=('pulseaudio-rtp')
 
   mv rtp/* "$pkgdir"
 }

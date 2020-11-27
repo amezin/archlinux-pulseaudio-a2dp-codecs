@@ -1,0 +1,26 @@
+From d7a24ee4f045ca90b1b01cbe5d9e203ba684fd02 Mon Sep 17 00:00:00 2001
+From: =?UTF-8?q?Pali=20Roh=C3=A1r?= <pali.rohar@gmail.com>
+Date: Sat, 21 Mar 2020 11:11:37 +0100
+Subject: [PATCH 02/10] bluetooth: Do not export pa_a2dp_codecs array
+
+It is not used directly outside of a2dp-codec-util.c file.
+---
+ src/modules/bluetooth/a2dp-codec-util.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/modules/bluetooth/a2dp-codec-util.c b/src/modules/bluetooth/a2dp-codec-util.c
+index 94d01e7bd..aff6589ca 100644
+--- a/src/modules/bluetooth/a2dp-codec-util.c
++++ b/src/modules/bluetooth/a2dp-codec-util.c
+@@ -30,7 +30,7 @@ extern const pa_a2dp_codec pa_a2dp_codec_sbc;
+ 
+ /* This is list of supported codecs. Their order is important.
+  * Codec with higher index has higher priority. */
+-const pa_a2dp_codec *pa_a2dp_codecs[] = {
++static const pa_a2dp_codec *pa_a2dp_codecs[] = {
+     &pa_a2dp_codec_sbc,
+ };
+ 
+-- 
+2.29.2
+
